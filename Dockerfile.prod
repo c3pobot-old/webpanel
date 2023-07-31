@@ -1,0 +1,6 @@
+FROM registry.gitlab.com/c3po-shard/webpanelapi:test
+WORKDIR /home/node/app
+COPY ./build /home/node/app/src/expressServer/webapp
+RUN rm -rf /home/node/app/src/expressServer/webapp/static/asset
+USER node
+CMD node index.js

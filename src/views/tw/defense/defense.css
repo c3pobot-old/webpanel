@@ -1,0 +1,60 @@
+.map-background {
+    background-image: url(~/public/tw-defense.png);
+    width: 1244px;
+    height: 882px;
+    position: absolute;
+}
+.zone{
+    position: absolute;
+    text-align: center;
+}
+.unit-container {
+    position: relative;
+    text-align: center;
+    top: -40px
+}
+.unit-image {
+    width: 100px;
+    height: 100px;
+    top: -2%;
+    display: -webkit-inline-box;
+    display: -ms-inline-flexbox;
+    display: inline-flex;
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    align-items: center;
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border-radius: 50%;
+    border: 2px solid #333;
+    background-color: #000
+}
+.unit-img {
+    width: 100px;
+    height: 100px;
+}
+.unit-image-2-0 {
+    position: relative;
+    top: -40px;
+}
+.unit-image-2-1 {
+    position: relative;
+    top: -60px;
+}
+.unit-image-3-0 {
+    position: relative;
+    top: -30px;
+}
+.unit-image-3-1 {
+    position: relative;
+    top: -50px;
+    left: -50px;
+}
+.unit-image-3-2 {
+    position: relative;
+    top: -157px;
+    left: 50px;
+}
