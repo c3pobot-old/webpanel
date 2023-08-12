@@ -11,7 +11,7 @@ import DaySelector from '../daySelector'
 import ShowDay from './showDay'
 import calcPoints from './calcPoints'
 
-export default function Stars({ opts = {}, tb, guild, guildMemberLevel, allyCode }){
+export default function Stars({ opts = {}, tb, guild = {}, guildMembers = [], guildMemberLevel, allyCode }){
   const { discordId, setAlert, setSpinner } = opts;
   const [ tbDef, setTBDef ] = useState()
   const [ zoneMap, setZoneMap ] = useState()

@@ -1,5 +1,5 @@
 import React, { Fragment, useEffect, useState } from 'react'
-import io from "socket.io-client";
+
 import { Button, Box, Tab, Tabs, Typography } from '@mui/material';
 
 import useLocalStorage from 'components/useLocalStorage'
@@ -12,8 +12,6 @@ import AllyCodeSelector from './allyCodeSelector'
 import TBSelector from './tbSelector'
 import Platoons from './platoons'
 import Stars from './stars'
-
-const socket = io( {transports: ['websocket']})
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -32,7 +30,7 @@ function tabProps(index) {
 }
 
 export default function TB(opts = {}){
-  const { discordId, setSpinner } = opts;
+  const { discordId, setAlert, setSpinner } = opts;
   const [ tb, setTB ] = useLocalStorage('tb-selection', null);
   const [ value, setValue ] = useLocalStorage('tb-home', 0);
   const [ allyCode, setAllyCode ] = useLocalStorage('tb-allyCode')
@@ -44,20 +42,7 @@ export default function TB(opts = {}){
     localStorage.setItem('startUrl', window.location.href)
     ButtonNav('/discord/login')
   }
-  useEffect(()=>{
-    socket.on('guildMember', (data={})=>{
-      setGuildMembers(oldArray=>[...oldArray, data])
-    })
-    socket.on('guild', async(data={})=>{
-      await setGuild(data)
-      fetchGuildMembers(data.id)
-    })
-    return()=>{
-      socket.off('guildMember')
-      socket.off('guild')
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+
   useEffect(()=>{
     if(allyCode) getGuildId()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,24 +62,23 @@ export default function TB(opts = {}){
   }
   async function updateGuild(){
     let tempGuild = JSON.parse(JSON.stringify(guild))
-    tempGuild.member = guildMembers
-    tempGuild.gp = await guildMembers?.reduce((acc, a)=>{
-      return acc + +(a?.gp || 0)
+    tempGuild.gp = +(tempGuild.profile?.guildGalacticPower || 0)
+    tempGuild.gpChar = tempGuild?.member?.reduce((acc, a)=>{
+      return acc + +(a?.characterGalacticPower || 0)
     }, 0)
-    tempGuild.gpChar = await guildMembers?.reduce((acc, a)=>{
-      return acc + +(a?.gpChar || 0)
-    }, 0)
-    tempGuild.gpShip = await guildMembers?.reduce((acc, a)=>{
-      return acc + +(a?.gpShip || 0)
+    tempGuild.gpShip = tempGuild?.member?.reduce((acc, a)=>{
+      return acc + +(a?.shipGalacticPower || 0)
     }, 0)
     await DB.set('guild-'+guildId, tempGuild)
+    await DB.set('guildMember-'+guildId, guildMembers)
     setGuild(tempGuild)
   }
   async function getGuildId(){
     let tempId = localStorage.getItem('guildId-'+allyCode)
     if(!tempId){
       setSpinner(true)
-      const apiData = await ApiRequest({method: 'getGuildId', dId: discordId, data: {allyCode: allyCode}})
+      let apiData = await ApiRequest({method: 'getGuildId', dId: discordId, data: {allyCode: allyCode}})
+
       if(apiData?.guildId) tempId = apiData.guildId
       setSpinner(false)
     }
@@ -106,25 +90,47 @@ export default function TB(opts = {}){
   }
   async function fetchGuild(){
     await setGuildMembers([])
-    socket.emit('cmd', 'getGuild', { discordId: discordId, guildId: guildId })
+    let apiData = await ApiRequest({method: 'client', dId: discordId, data: {query: 'guild', payload: { guildId: guildId, includeRecentGuildActivityInfo: true } }})
+    if(apiData?.guild){
+      apiData.guild.id = apiData.guild.profile.id
+      apiData.guild.name = apiData.guild.profile.name
+      apiData.guild.updated = Date.now()
+      await setGuild(apiData?.guild)
+      fetchGuildMembers(apiData?.guild?.member)
+    }
   }
-  async function fetchGuildMembers(guildId){
-    socket.emit('cmd', 'getGuildMembers', {discordId: discordId, guildId: guildId, projection: {name: 1, playerId: 1, gp: 1, gpChar: 1, gpShip: 1, zetaCount: 1, sixModCount: 1, omiCount: 1, guildName: 1, rosterUnit: {sort: 1, definitionId: 1, currentLevel: 1, currentRarity: 1, currentTier: 1, relic: 1, gp: 1, combatType: 1}}})
+  async function fetchGuildMember(playerId){
+    let player = await ApiRequest({method: 'client', dId: discordId, data: { query: 'player', payload: {playerId: playerId }}})
+    if(player?.allyCode) setGuildMembers(oldArray=>[...oldArray, player])
+  }
+  function fetchGuildMembers(member){
+    for(let i in member) fetchGuildMember(member[i].playerId)
   }
   async function getGuild(force = false){
     setSpinner(true)
     setGuild(null)
-    let tempObj
-    if(!force) tempObj = await DB.get('guild-'+guildId)
-    if(!tempObj?.name) fetchGuild()
+    let tempGuild, tempGuildMembers
+    if(!force){
+      tempGuild = await DB.get('guild-'+guildId)
+      tempGuildMembers = await DB.get('guildMember-'+guildId,)
+    }
+    if(!tempGuild?.profile?.name || !tempGuildMembers) await fetchGuild()
     if(!guildMemberLevel){
-      const member = await ApiRequest({method: 'client', dId: discordId, data: {query: 'getGuildMemberLevel', payload: {allyCode: allyCode}}})
+      let member = await ApiRequest({method: 'getGuildMemberLevel', dId: discordId, data: {allyCode: allyCode}})
       if(member?.level) setGuildMemberLevel(member.level)
     }
+    if(tempGuild?.profile?.name && tempGuildMembers){
+      setGuild(tempGuild)
+      setGuildMembers(tempGuildMembers)
+    }
     setSpinner(false)
-    if(tempObj?.name){
-      setGuildMembers(tempObj.member)
-      setGuild(tempObj)
+  }
+  function refreshGuild(){
+    let timeDiff = Date.now() - guild.updated
+    if(timeDiff > 600000){
+      getGuild(true)
+    }else{
+      setAlert({type: 'error', msg: 'There is a 20 minute cooldown between refreshs'})
     }
   }
   const handleChange = (event, newValue) => {
@@ -146,7 +152,7 @@ export default function TB(opts = {}){
     <Fragment>
     <Box>&nbsp;</Box>
     <Box sx={{textAlign: 'center'}}>
-      <Button variant="contained" sx={{display: 'inline'}} onClick={()=>getGuild(true)}>{'Guild Data as of '+(new Date(guild?.updated))+' Click to refresh'}</Button>
+      <Button variant="contained" sx={{display: 'inline'}} onClick={refreshGuild}>{'Guild Data as of '+(new Date(guild?.updated))+' Click to refresh'}</Button>
     </Box>
     <Box>&nbsp;</Box>
     <Box sx={{textAlign: 'center'}}>
@@ -163,10 +169,10 @@ export default function TB(opts = {}){
         </Tabs>
       </Box>
       <TabPanel value={value} index={0}>
-        <Platoons opts={opts} tb={tb} guild={guild} allyCode={allyCode} guildMemberLevel={guildMemberLevel}/>
+        <Platoons opts={opts} tb={tb} guild={guild} guildMembers={guildMembers} allyCode={allyCode} guildMemberLevel={guildMemberLevel}/>
       </TabPanel>
       <TabPanel value={value} index={1}>
-        <Stars opts={opts} tb={tb} guild={guild} allyCode={allyCode} guildMemberLevel={guildMemberLevel}/>
+        <Stars opts={opts} tb={tb} guild={guild} guildMembers={guildMembers} allyCode={allyCode} guildMemberLevel={guildMemberLevel}/>
       </TabPanel>
     </Box>
     </Fragment>

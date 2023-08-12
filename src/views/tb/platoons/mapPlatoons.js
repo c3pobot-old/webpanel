@@ -25,7 +25,7 @@ const GetUnits = async(baseId, members = [], playerUnitCount = {}, maxUnit = 10)
         tier: rosterUnits[0].currentTier,
         gp: rosterUnits[0].gp,
         combatType: rosterUnits[0].combatType,
-        sort: rosterUnits[0].sort
+        sort: (rosterUnits[0].relic?.currentTier || 0) + (rosterUnits[0].currentTier || 0)
       })
     })
   }catch(e){
@@ -60,9 +60,9 @@ const GetSquadConfig = (platoonIds = [], platoonId, squadNum)=>{
     console.error(e);
   }
 }
-const GetNumUnits = (member = [], baseId, relicTier = 1, rarity = 1)=>{
+const GetNumUnits = (member = [], baseId, relicTier = 1, rarity = 1, combatType = 1)=>{
   try{
-    return +member.filter(x=>x.rosterUnit.filter(y=>y.definitionId?.startsWith(baseId+':') && y.currentRarity >= 0 && (y.combatType === 2 || y.relic?.currentTier >= relicTier)).length > 0).length
+    return +member.filter(x=>x.rosterUnit.filter(y=>y.definitionId?.startsWith(baseId+':') && y.currentRarity >= 0 && (combatType === 2 || y.relic?.currentTier >= relicTier)).length > 0).length
   }catch(e){
     console.error(e);
   }
@@ -115,9 +115,9 @@ export default async function MapPlatoons(pDefinition = [], guild = [], platoonI
             if(unitCounts[u].unitRelicTier > tempPlatoon.relicTier) tempPlatoon.relicTier = unitCounts[u].unitRelicTier
             if(!units[unitCounts[u].baseId]) units[unitCounts[u].baseId] = await GetUnits(unitCounts[u].baseId, guild, playerUnitCount, tempPlatoon.maxUnit)
             // && x.rarity >= unitCounts[u].rarity && x.tier >= unitCounts[u].tier && x.relicTier >= unitCounts[u].unitRelicTier
-            let avaliableUnits = units[unitCounts[u].baseId].filter(x=>x.rarity >= unitCounts[u].rarity && (x.combatType === 2 || x.relicTier >= unitCounts[u].unitRelicTier))
+            let avaliableUnits = units[unitCounts[u].baseId].filter(x=>x.rarity >= unitCounts[u].rarity && (unitCounts[u].combatType === 2 || x.relicTier >= unitCounts[u].unitRelicTier))
             //if(unitCounts[u].combatType === 1) avaliableUnits = avaliableUnits?.filter(x=>x.tier >= unitCounts[u].tier && x.relicTier >= unitCounts[u].unitRelicTier)
-            if(avaliableUnits?.length > 0) avaliableUnits = await sorter(avaliableUnits, 'asec', 'gp')
+            if(avaliableUnits?.length > 0) avaliableUnits = await sorter(avaliableUnits, 'asec', 'relicTier')
             let prefilled = tempSquad.unitConfig?.find(x=>x.baseId === unitCounts[u].baseId && x.prefilled > 0)
             if(prefilled?.baseId){
               for(let m = 0;m<prefilled.prefilled;m++){
@@ -140,7 +140,7 @@ export default async function MapPlatoons(pDefinition = [], guild = [], platoonI
               }
             }else{
               for(let m = 0;m<unitCounts[u].count;m++){
-                tempSquad.units.push({nameKey: unitCounts[u].nameKey, baseId: unitCounts[u].baseId, available: +avaliableUnits?.length, count: GetNumUnits(guild, unitCounts[u].baseId, unitCounts[u].unitRelicTier, unitCounts[u].rarity)})
+                tempSquad.units.push({nameKey: unitCounts[u].nameKey, baseId: unitCounts[u].baseId, available: +avaliableUnits?.length, count: GetNumUnits(guild, unitCounts[u].baseId, unitCounts[u].unitRelicTier, unitCounts[u].rarity, unitCounts[u].combatType)})
               }
             }
           }

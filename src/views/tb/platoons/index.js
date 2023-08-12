@@ -19,7 +19,7 @@ const getRound = (id)=>{
     console.error(e);
   }
 }
-export default function Platoons({opts = {}, tb = {}, guild = {}, allyCode, guildMemberLevel = 0}){
+export default function Platoons({opts = {}, tb = {}, guild = {}, guildMembers = [], allyCode, guildMemberLevel = 0}){
   const { discordId, setAlert, setSpinner } = opts
   //const [ tbDef, setTBDef ] = useState()
   const [ platoons, setPlatoons ] = useState()
@@ -108,7 +108,7 @@ export default function Platoons({opts = {}, tb = {}, guild = {}, allyCode, guil
   }
   async function GetPlatoonMap(){
     setSpinner(true)
-    const tempPlatoonMap = await MapPlatoons(platoons, guild.member, platoonIds, tbDay)
+    const tempPlatoonMap = await MapPlatoons(platoons, guildMembers, platoonIds, tbDay)
     if(tempPlatoonMap?.length > 0){
       await DB.set('tb-platoonsMap-'+tbDay, tempPlatoonMap)
       setPlatoonMap(tempPlatoonMap)
@@ -150,7 +150,7 @@ export default function Platoons({opts = {}, tb = {}, guild = {}, allyCode, guil
           </TableRow>
         </TableBody>
       </Table>
-    {platoonMap?.length > 0 && <ShowPlatoons opts={opts} platoonMap={platoonMap} pDef={platoons} platoonIds={platoonIds} tbId={tb.value} setPlatoonIds={setPlatoonIds} tbDay={tbDay} member={guild?.member}/>}
+    {platoonMap?.length > 0 && <ShowPlatoons opts={opts} platoonMap={platoonMap} pDef={platoons} platoonIds={platoonIds} tbId={tb.value} setPlatoonIds={setPlatoonIds} tbDay={tbDay} member={guildMembers}/>}
     </Fragment>
   )
 }
