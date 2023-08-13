@@ -1,6 +1,2 @@
-FROM ghcr.io/c3pobot-old/webpanelapi:latest
-WORKDIR /app
-COPY ./build /app/src/expressServer/webapp
-RUN rm -rf /app/src/expressServer/webapp/static/asset
-USER node
-CMD node index.js
+FROM nginx:stable-alpine3.17-slim
+COPY ./build /usr/share/nginx/html
