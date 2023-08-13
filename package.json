@@ -35,7 +35,7 @@
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "prod": "chmod a+x buildprodimage.sh && ./buildprodimage.sh c3pobot-old/webpanel"
+    "prod": "GENERATE_SOURCEMAP=false react-scripts build && chmod a+x buildprodimage.sh && ./buildprodimage.sh c3pobot-old/webpanel"
   },
   "eslintConfig": {
     "extends": [
