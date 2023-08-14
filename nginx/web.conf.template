@@ -1,0 +1,28 @@
+server {
+  listen $PORT;
+  server_name $DOMAIN_NAME;
+  access_log  /dev/null;
+  root /usr/share/nginx/html;
+  index index.html index.htm;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $http_connection;
+
+  location /api {
+    proxy_pass $API_SERVICE_URI;
+  }
+  location /asset {
+    proxy_pass $ASSET_URI;
+  }
+  location /portrait {
+    proxy_pass $ASSET_URI;
+  }
+  location /socket.io {
+    proxy_pass $API_SERVICE_URI;
+  }
+  location /thumbnail {
+    proxy_pass $ASSET_URI;
+  }
+  location / {
+    try_files $uri /index.html;
+  }
+}

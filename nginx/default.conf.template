@@ -1,0 +1,8 @@
+server {
+  listen $PORT;
+  server_name default-host.localhost;
+
+  location / {
+    return 404;
+  }
+}
